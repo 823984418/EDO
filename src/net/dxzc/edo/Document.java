@@ -54,13 +54,19 @@ public class Document {
         return -1;
     }
 
+    /**
+     * 构建一个空的文档对象.
+     */
     public Document() {
+        endLine = headLine = new Line();
+        lineCount = 1;
     }
 
-    /**
-     * 头一行.
-     */
-    public final Line head = new Line();
+    Line headLine;
+
+    Line endLine;
+
+    int lineCount;
 
     final Set<Pointer> pointers = Collections.newSetFromMap(new WeakHashMap<>());
 
@@ -101,6 +107,7 @@ public class Document {
                 Line wiLine = start.line.next;
                 while ((fn = find(text, last, textEnd, '\n')) != -1) {
                     Line newLine = new Line();
+                    lineCount++;
                     lastLine.next = newLine;
                     newLine.previous = lastLine;
                     newEl++;
@@ -109,11 +116,14 @@ public class Document {
                     last = fn + 1;
                 }
                 Line eLine = new Line();
+                lineCount++;
                 eLine.previous = lastLine;
                 eLine.next = wiLine;
                 lastLine.next = eLine;
                 if (wiLine != null) {
                     wiLine.previous = eLine;
+                } else {
+                    endLine = eLine;
                 }
                 newEl++;
                 eLine.replace(0, 0, text, last, textEnd);
@@ -125,20 +135,24 @@ public class Document {
         } else {
             if (fn == -1) {//不同一行无换行符
                 start.line.replace(start.offset, start.line.length, text, begin, textEnd);
-                start.line.replace(end.offset, end.offset, end.line.buff, end.offset, end.line.length);
+                start.line.replace(start.offset + size, start.offset + size, end.line.buff, end.offset, end.line.length);
                 start.line.next = end.line.next;
                 if (end.line.next != null) {
                     end.line.next.previous = start.line;
+                } else {
+                    endLine = start.line;
                 }
                 newEl--;
                 newEndOff = start.offset + size;
                 newEndLine = end.line;
+                lineCount -= end.lineNumber - start.lineNumber;
             } else {//不同一行有换行符
                 start.line.replace(start.offset, start.line.length, text, begin, fn);
                 int last = fn + 1;
                 Line lastLine = start.line;
                 while ((fn = find(text, last, textEnd, '\n')) != -1) {
                     Line newLine = new Line();
+                    lineCount++;
                     lastLine.next = newLine;
                     newLine.previous = lastLine;
                     newEl++;
@@ -151,6 +165,7 @@ public class Document {
                 end.line.replace(0, end.offset, text, last, textEnd);
                 newEndOff = textEnd - last;
                 newEndLine = end.line;
+                lineCount -= end.lineNumber - start.lineNumber;
             }
         }
         int addOff = newEndOff - end.offset;
@@ -195,7 +210,7 @@ public class Document {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        for (Line line = head; line != null; line = line.next) {
+        for (Line line = headLine; line != null; line = line.next) {
             sb.append(line.buff, 0, line.length);
             sb.append("\n");
         }
@@ -207,7 +222,7 @@ public class Document {
     public String debug() {
         StringBuilder sb = new StringBuilder();
         int i = 1;
-        for (Line line = head; line != null; line = line.next) {
+        for (Line line = headLine; line != null; line = line.next) {
             sb.append(i++);
             sb.append("\t");
             sb.append(line.buff, 0, line.length);

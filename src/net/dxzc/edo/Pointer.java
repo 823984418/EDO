@@ -32,12 +32,15 @@ package net.dxzc.edo;
  */
 public class Pointer implements Comparable<Pointer> {
 
+    /**
+     * 构建一个指向文档头部的指针.
+     *
+     * @param document 文档
+     */
     public Pointer(Document document) {
         this.document = document;
-        lineNumber = 1;
-        line = document.head;
-        offset = 0;
         document.pointers.add(this);
+        moveToHead();
     }
 
     /**
@@ -50,6 +53,24 @@ public class Pointer implements Comparable<Pointer> {
     Line line;
 
     int offset;
+
+    /**
+     * 移动到文档头部.
+     */
+    public void moveToHead() {
+        lineNumber = 1;
+        line = document.headLine;
+        offset = 0;
+    }
+
+    /**
+     * 移动到文档尾部.
+     */
+    public void moveToEnd() {
+        lineNumber = document.lineCount;
+        line = document.endLine;
+        offset = line.length;
+    }
 
     /**
      * 获取行号. 从1计数
@@ -93,17 +114,20 @@ public class Pointer implements Comparable<Pointer> {
     }
 
     /**
-     * 相对移动. 到边界时停止
+     * 相对移动.到边界时停止
      *
      * @param size 移动字符数
+     * @return 是否发生边界碰撞
      */
-    public void move(int size) {
+    public boolean move(int size) {
+        boolean r = false;
         Line l = line;
         int ln = lineNumber;
         size += offset;
         while (size < 0) {
             if (l.previous == null) {
                 size = 0;
+                r = true;
                 break;
             }
             l = l.previous;
@@ -113,6 +137,7 @@ public class Pointer implements Comparable<Pointer> {
         while (size > l.length) {
             if (l.next == null) {
                 size = l.length;
+                r = true;
                 break;
             }
             size -= l.length + 1;
@@ -122,19 +147,23 @@ public class Pointer implements Comparable<Pointer> {
         line = l;
         lineNumber = ln;
         offset = size;
+        return r;
     }
 
     /**
-     * 移动所在行并指向行首. 到边界时停止
+     * 移动所在行并指向行首.到边界时停止
      *
      * @param size 移动行数
+     * @return 是否发生边界碰撞
      */
-    public void lineMove(int size) {
+    public boolean lineMove(int size) {
+        boolean r = false;
         offset = 0;
         Line l = line;
         int ln = lineNumber;
         while (size < 0) {
             if (l.previous == null) {
+                r = true;
                 break;
             }
             l = l.previous;
@@ -142,6 +171,7 @@ public class Pointer implements Comparable<Pointer> {
         }
         while (size > 0) {
             if (l.next == null) {
+                r = true;
                 break;
             }
             l = l.next;
@@ -149,6 +179,7 @@ public class Pointer implements Comparable<Pointer> {
         }
         line = l;
         lineNumber = ln;
+        return r;
     }
 
     /**
@@ -161,8 +192,7 @@ public class Pointer implements Comparable<Pointer> {
         Line ol = line;
         int oln = lineNumber;
         int oo = offset;
-        lineMove(newLineNumber - lineNumber);
-        if (newOffset < 0 || newOffset > line.length) {
+        if (newOffset < 0 || lineMove(newLineNumber - lineNumber) || newOffset > line.length) {
             line = ol;
             lineNumber = oln;
             offset = oo;
