@@ -60,6 +60,7 @@ public class Document {
     public Document() {
         endLine = headLine = new Line();
         lineCount = 1;
+        length = 0;
     }
 
     Line headLine;
@@ -67,6 +68,26 @@ public class Document {
     Line endLine;
 
     int lineCount;
+
+    int length;
+
+    /**
+     * 获取长度.
+     *
+     * @return 文档长度
+     */
+    public int getLength() {
+        return length;
+    }
+
+    /**
+     * 获取行数.
+     *
+     * @return 文档行数
+     */
+    public int getLineCount() {
+        return lineCount;
+    }
 
     final Set<Pointer> pointers = Collections.newSetFromMap(new WeakHashMap<>());
 
@@ -90,6 +111,8 @@ public class Document {
         if (begin < 0 || size < 0 || textEnd > text.length) {
             throw new IndexOutOfBoundsException();
         }
+        int add = (textEnd - begin) - (end.pos - start.pos);
+        length += add;
         int oldEL = end.lineNumber;
         int newEl = oldEL;
         int newEndOff;
@@ -170,19 +193,20 @@ public class Document {
         }
         int addOff = newEndOff - end.offset;
         int addEL = newEl - newEl;
+        int endPos = end.pos + add;
         for (Pointer p : pointers) {
             if (p == start || p == end) {
                 continue;
-            }
-            if (start.compareTo(p) >= 0) {
+            } else if (start.compareTo(p) >= 0) {
                 continue;
-            }
-            if (end.compareTo(p) >= 0) {
+            } else if (end.compareTo(p) >= 0) {
                 p.lineNumber = newEl;
                 p.offset = newEndOff;
                 p.line = newEndLine;
+                p.pos = endPos;
             } else {
                 p.lineNumber += addEL;
+                p.pos += add;
                 if (end.lineComparetTo(p) == 0) {
                     p.offset += addOff;
                     p.line = newEndLine;
@@ -192,6 +216,7 @@ public class Document {
         end.lineNumber = newEl;
         end.offset = newEndOff;
         end.line = newEndLine;
+        end.pos = endPos;
     }
 
     /**
@@ -221,10 +246,15 @@ public class Document {
 
     public String debug() {
         StringBuilder sb = new StringBuilder();
+        sb.append("lineCount=");
+        sb.append(lineCount);
+        sb.append("\nlength=");
+        sb.append(length);
+        sb.append("\n");
         int i = 1;
         for (Line line = headLine; line != null; line = line.next) {
             sb.append(i++);
-            sb.append("\t");
+            sb.append(":\t");
             sb.append(line.buff, 0, line.length);
             sb.append("\n");
         }

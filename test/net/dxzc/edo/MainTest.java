@@ -33,12 +33,15 @@ public class MainTest {
 
     public static void main(String[] args) {
         Document d = new Document();
+        System.out.println(d.debug());
         Pointer a = new Pointer(d);
         Pointer b = new Pointer(d);
         d.replace(a, b, "ab\ncd\nef");
         System.out.println(d.debug());
         a.move(1);
         b.move(-1);
+        System.out.println(a);
+        System.out.println(b);
         d.replace(a, b, "xxx");
         System.out.println(d.debug());
         b.moveToEnd();

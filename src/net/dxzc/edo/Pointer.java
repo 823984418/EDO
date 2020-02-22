@@ -54,6 +54,8 @@ public class Pointer implements Comparable<Pointer> {
 
     int offset;
 
+    int pos;
+
     /**
      * 移动到文档头部.
      */
@@ -61,6 +63,7 @@ public class Pointer implements Comparable<Pointer> {
         lineNumber = 1;
         line = document.headLine;
         offset = 0;
+        pos = 0;
     }
 
     /**
@@ -70,6 +73,7 @@ public class Pointer implements Comparable<Pointer> {
         lineNumber = document.lineCount;
         line = document.endLine;
         offset = line.length;
+        pos = document.length;
     }
 
     /**
@@ -100,6 +104,15 @@ public class Pointer implements Comparable<Pointer> {
     }
 
     /**
+     * 获取当前位置.
+     *
+     * @return 当前位置
+     */
+    public int getPos() {
+        return pos;
+    }
+
+    /**
      * 即赋值运算. 如果不归属于同一个{@link Document}则抛出异常
      *
      * @param ptr 另一个指针
@@ -111,6 +124,7 @@ public class Pointer implements Comparable<Pointer> {
         lineNumber = ptr.lineNumber;
         line = ptr.line;
         offset = ptr.offset;
+        pos = ptr.pos;
     }
 
     /**
@@ -123,11 +137,13 @@ public class Pointer implements Comparable<Pointer> {
         boolean r = false;
         Line l = line;
         int ln = lineNumber;
+        pos += size;
         size += offset;
         while (size < 0) {
             if (l.previous == null) {
                 size = 0;
                 r = true;
+                pos = 0;
                 break;
             }
             l = l.previous;
@@ -138,6 +154,7 @@ public class Pointer implements Comparable<Pointer> {
             if (l.next == null) {
                 size = l.length;
                 r = true;
+                pos = document.length;
                 break;
             }
             size -= l.length + 1;
@@ -158,6 +175,7 @@ public class Pointer implements Comparable<Pointer> {
      */
     public boolean lineMove(int size) {
         boolean r = false;
+        pos -= offset;
         offset = 0;
         Line l = line;
         int ln = lineNumber;
@@ -167,6 +185,7 @@ public class Pointer implements Comparable<Pointer> {
                 break;
             }
             l = l.previous;
+            pos -= l.length;
             ln--;
         }
         while (size > 0) {
@@ -174,6 +193,7 @@ public class Pointer implements Comparable<Pointer> {
                 r = true;
                 break;
             }
+            pos += l.length;
             l = l.next;
             ln++;
         }
@@ -192,13 +212,42 @@ public class Pointer implements Comparable<Pointer> {
         Line ol = line;
         int oln = lineNumber;
         int oo = offset;
+        int op = pos;
         if (newOffset < 0 || lineMove(newLineNumber - lineNumber) || newOffset > line.length) {
             line = ol;
             lineNumber = oln;
             offset = oo;
+            pos = op;
             throw new IndexOutOfBoundsException();
         }
         offset = newLineNumber;
+    }
+
+    /**
+     * 移动到指定位置.
+     *
+     * @param newPos 新的位置
+     */
+    public void moveTo(int newPos) {
+        if (newPos < 0 || newPos > document.length) {
+            throw new IndexOutOfBoundsException();
+        }
+        move(newPos - pos);
+    }
+
+    /**
+     * 返回此指针的后方字符. 如果处于末尾,返回{@code -1}
+     *
+     * @return 字符
+     */
+    public int readChar() {
+        if (offset == line.length) {
+            if (line.next == null) {
+                return -1;
+            }
+            return '\n';
+        }
+        return line.buff[offset];
     }
 
     /**
@@ -212,12 +261,7 @@ public class Pointer implements Comparable<Pointer> {
         if (document != o.document) {
             throw new UnsupportedOperationException();
         }
-        int r = lineNumber - o.lineNumber;
-        if (r != 0) {
-            return r;
-        }
-        r = offset - o.offset;
-        return r;
+        return pos - o.pos;
     }
 
     /**
@@ -235,7 +279,7 @@ public class Pointer implements Comparable<Pointer> {
 
     @Override
     public String toString() {
-        return lineNumber + ":" + offset;
+        return lineNumber + ":" + offset + "|" + pos;
     }
 
 }
