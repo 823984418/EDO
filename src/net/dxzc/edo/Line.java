@@ -43,6 +43,10 @@ public class Line implements CharSequence {
 
     int length = 0;
 
+    public char[] getBuff() {
+        return buff;
+    }
+
     /**
      * 替换内容不得包括换行符.
      *
